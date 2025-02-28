@@ -1,0 +1,47 @@
+[
+  {
+    "api_provider": "OpenAI",
+    "api_base_url": "https://api.openai.com/v1/",
+    "api_key": "your_openai_key_here"
+  },
+  {
+    "api_provider": "Anthropic",
+    "api_base_url": "https://api.anthropic.com/v1/",
+    "api_key": "your_anthropic_key_here"
+  },
+  {
+    "api_provider": "Tencent",
+    "api_base_url": "https://api.lkeap.cloud.tencent.com/v1/",
+    "api_key": "your_TencentTencent_key_here"
+  },
+  {
+    "api_provider": "Qianfan",
+    "api_base_url": "https://qianfan.baidubce.com/v2/",
+    "api_key": "your_qianfan_key_here"
+  },
+  {
+    "api_provider": "Siliconflow",
+    "api_base_url": "https://api.siliconflow.cn/v1/",
+    "api_key": "your_siliconflow_key_here"
+  },
+  {
+    "api_provider": "Deepseek",
+    "api_base_url": "https://api.deepseek.com",
+    "api_key": ""
+  },
+  {
+    "api_provider": "ZhipuAI",
+    "api_base_url": "https://open.bigmodel.cn/api/paas/v4/",
+    "api_key": "your_zhipuai_key_here"
+  },
+  {
+    "api_provider": "Volcengine",
+    "api_base_url": "https://ark.cn-beijing.volces.com/api/v3/",
+    "api_key": "a5926646-a0b1-4d4a-b617-64878ca3dabc"
+  },
+  {
+    "api_provider": "XAI",
+    "api_base_url": "https://api.x.ai/v1/",
+    "api_key": "your_XAI_key_here"
+  }
+]
