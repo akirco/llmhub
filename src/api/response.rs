@@ -62,6 +62,46 @@ impl Response {
     pub fn total_tokens(&self) -> Option<u32> {
         self.usage.as_ref().and_then(|usage| usage.total_tokens)
     }
+
+    /// Get the main content from the first choice
+    pub fn main_content(&self) -> Option<String> {
+        self.choices
+            .first()
+            .and_then(|c| {
+                c.delta.as_ref().and_then(|d| { d.content.as_ref().map(|s| s.to_owned()) })
+            })
+    }
+
+    /// Get the reasoning content from the first choice
+    pub fn reasoning_content(&self) -> Option<String> {
+        self.choices
+            .first()
+            .and_then(|c| {
+                c.delta
+                    .as_ref()
+                    .and_then(|d| { d.reasoning_content.as_ref().map(|s| s.to_owned()) })
+            })
+    }
+
+    /// Get the message main content for non-streaming response
+    pub fn message_content(&self) -> Option<String> {
+        self.choices
+            .first()
+            .and_then(|c| {
+                c.message.as_ref().and_then(|d| { d.content.as_ref().map(|s| s.to_owned()) })
+            })
+    }
+
+    /// Get the message reasoning content for non-streaming response
+    pub fn message_reasoning(&self) -> Option<String> {
+        self.choices
+            .first()
+            .and_then(|c| {
+                c.message
+                    .as_ref()
+                    .and_then(|d| { d.reasoning_content.as_ref().map(|s| s.to_owned()) })
+            })
+    }
 }
 
 /**

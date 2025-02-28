@@ -112,19 +112,41 @@ impl LLMClient {
         match chunk_result {
             Ok(chunk) => {
                 let chunk_str = String::from_utf8_lossy(&chunk);
+                log::debug!("Received chunk: {}", chunk_str);
                 let messages: Vec<String> = chunk_str
                     .lines()
                     .filter(|line| !line.is_empty())
-                    .map(|line| line.to_string())
+                    .map(|line| line.trim().to_string())
                     .collect();
+
+                if messages.is_empty() {
+                    return Box::pin(
+                        once(
+                            future::ready(
+                                Err(LLMError::DecodeError("Empty response chunk".to_string()))
+                            )
+                        )
+                    );
+                }
 
                 Box::pin(
                     futures::stream::iter(
-                        messages.into_iter().filter_map(|msg| Self::parse_sse_message(&msg))
+                        messages
+                            .into_iter()
+                            .filter_map(|msg| Self::parse_sse_message(&msg))
+                            .collect::<Vec<_>>()
                     )
                 )
             }
-            Err(e) => Box::pin(once(future::ready(Err(LLMError::RequestError(e))))),
+            Err(e) => {
+                log::error!("Chunk processing error: {}", e);
+                let error = if e.is_decode() {
+                    LLMError::DecodeError(e.to_string())
+                } else {
+                    LLMError::RequestError(e)
+                };
+                Box::pin(once(future::ready(Err(error))))
+            }
         }
     }
 

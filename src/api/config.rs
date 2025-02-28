@@ -139,13 +139,13 @@ impl ProviderConfig {
     /// Returns the default path for the configuration file
     pub fn default_config_path() -> String {
         let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-        home_dir.join(".llmhub/config.json").to_string_lossy().to_string()
+        home_dir.join(".config/llmhub.json").to_string_lossy().to_string()
     }
 
     /// Ensures the configuration directory exists, creating it if necessary
     pub fn ensure_config_dir() -> Result<(), Box<dyn std::error::Error>> {
         let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-        let config_dir = home_dir.join(".llmhub");
+        let config_dir = home_dir.join(".config");
 
         if !config_dir.exists() {
             std::fs::create_dir_all(&config_dir)?;

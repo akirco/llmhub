@@ -14,6 +14,10 @@ pub enum LLMError {
     #[error("Parse error: {0}")] ParseError(String),
 
     #[error(transparent)] ProviderError(#[from] crate::api::providers::ModelProviderError),
+
+    #[error("Response decode error: {0}")] DecodeError(String),
+
+    #[error("Stream processing error: {0}")] StreamError(String),
 }
 
 impl LLMError {
@@ -48,6 +52,10 @@ impl LLMError {
                     crate::api::providers::ModelProviderError::UnsupportedApiType(api_type) =>
                         format!("Provider {} does not support this model", api_type),
                 }
+            LLMError::DecodeError(msg) =>
+                format!("Failed to decode API response: {}. This might be a temporary issue, please try again.", msg),
+            LLMError::StreamError(msg) =>
+                format!("Stream processing error: {}. The connection might have been interrupted.", msg),
         }
     }
 }
