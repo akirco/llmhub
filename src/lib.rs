@@ -4,22 +4,29 @@ pub mod utils;
 
 use crate::{
     api::{
-        config::ProviderConfig, message::Prompt, providers::ApiProvider, request::RequestBody,
-        request::RequestHeader, request::RequestOptions, request::RequestUrl, response::Response,
+        config::ProviderConfig,
+        message::Prompt,
+        providers::ApiProvider,
+        request::RequestBody,
+        request::RequestHeader,
+        request::RequestOptions,
+        request::RequestUrl,
+        response::Response,
         session::ChatSession,
     },
     models::models::Model,
-    utils::{error::LLMError, error::Result},
+    utils::{ error::LLMError, error::Result },
 };
 use bytes::Bytes;
 use futures::stream::once;
-use futures::{Stream, StreamExt, future};
+use futures::{ Stream, StreamExt, future };
 use log;
 use reqwest::Client as HttpClient;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Main client for interacting with LLM APIs
 pub struct LLMClient {
     http_client: HttpClient,
     config: Arc<RwLock<ProviderConfig>>,
@@ -27,7 +34,10 @@ pub struct LLMClient {
 }
 
 impl LLMClient {
-    /// Creates a new LLM client with the specified provider configuration
+    /// Creates a new LLM client instance
+    ///
+    /// # Arguments
+    /// * `config` - Provider configuration containing API keys and settings
     pub fn new(config: ProviderConfig) -> Self {
         Self {
             http_client: HttpClient::builder()
@@ -39,10 +49,19 @@ impl LLMClient {
         }
     }
 
-    /// Sends a streaming request and returns a stream of responses
+    /// Sends a streaming request to the LLM API
+    ///
+    /// # Arguments
+    /// * `request` - Preconfigured request body containing model parameters and messages
+    ///
+    /// # Returns
+    /// [`Result`] containing a pinned stream of [`Response`] items wrapped in [`Result`]
+    ///
+    /// # Errors
+    /// Returns [`LLMError`] for rate limiting, configuration issues, or API failures
     pub async fn send_stream_request(
         &self,
-        request: RequestBody,
+        request: RequestBody
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Response>> + Send>>> {
         // Pre-request validation
         self.check_rate_limit(&request.provider).await?;
@@ -54,27 +73,22 @@ impl LLMClient {
         println!("{}", serde_json::to_string_pretty(&request).unwrap());
 
         // Get API key and build headers using RequestHeader struct
-        let api_key = self
-            .config
-            .read()
-            .await
-            .api_key
-            .as_ref()
+        let api_key = self.config
+            .read().await
+            .api_key.as_ref()
             .ok_or_else(|| LLMError::ConfigError("API key not set".to_string()))?
             .clone();
 
         let headers = RequestHeader::new(api_key);
 
         // Send HTTP request
-        let response = self
-            .http_client
+        let response = self.http_client
             .post(&request_url.url)
             .header("Authorization", headers.authorization)
             .header("Content-Type", headers.content_type.unwrap_or_default())
             .header("Accept", headers.accept.unwrap_or_default())
             .json(&request)
-            .send()
-            .await
+            .send().await
             .map_err(LLMError::RequestError)?;
 
         // Check response status
@@ -93,7 +107,7 @@ impl LLMClient {
 
     /// Helper method to process each chunk of the stream
     fn process_chunk(
-        chunk_result: std::result::Result<Bytes, reqwest::Error>,
+        chunk_result: std::result::Result<Bytes, reqwest::Error>
     ) -> Pin<Box<dyn Stream<Item = Result<Response>> + Send>> {
         match chunk_result {
             Ok(chunk) => {
@@ -104,11 +118,11 @@ impl LLMClient {
                     .map(|line| line.to_string())
                     .collect();
 
-                Box::pin(futures::stream::iter(
-                    messages
-                        .into_iter()
-                        .filter_map(|msg| Self::parse_sse_message(&msg)),
-                ))
+                Box::pin(
+                    futures::stream::iter(
+                        messages.into_iter().filter_map(|msg| Self::parse_sse_message(&msg))
+                    )
+                )
             }
             Err(e) => Box::pin(once(future::ready(Err(LLMError::RequestError(e))))),
         }
@@ -150,12 +164,21 @@ impl LLMClient {
     }
 
     /// Chat with stream using specific provider
+    ///
+    /// # Arguments
+    /// * `model` - The LLM model to use for generation
+    /// * `message` - Initial prompt/message for the conversation
+    /// * `provider` - Optional explicit API provider selection
+    /// * `options` - Additional request options like temperature and max tokens
+    ///
+    /// # Returns
+    /// [`Result`] with a stream of partial responses
     pub async fn chat_with_stream(
         &self,
         model: Model,
         message: Prompt,
         provider: Option<ApiProvider>,
-        options: Option<RequestOptions>,
+        options: Option<RequestOptions>
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Response>> + Send>>> {
         let provider = provider.unwrap_or_else(|| model.provider());
 
@@ -176,17 +199,18 @@ impl LLMClient {
     pub async fn create_chat_session(
         &self,
         model: Model,
-        provider: Option<ApiProvider>,
+        provider: Option<ApiProvider>
     ) -> ChatSession {
         ChatSession::new(model, provider)
     }
 
-    pub async fn update_config(&self, new_config: ProviderConfig) {
-        let mut config = self.config.write().await;
-        *config = new_config;
-    }
-
-    /// Sends a non-streaming request and returns a single response
+    /// Sends a standard (non-streaming) request to the LLM API
+    ///
+    /// # Arguments
+    /// * `request` - Preconfigured request body
+    ///
+    /// # Returns
+    /// [`Result`] with the complete [`Response`] after processing
     async fn send_request(&self, request: RequestBody) -> Result<Response> {
         // Pre-request validation
         self.check_rate_limit(&request.provider).await?;
@@ -196,27 +220,22 @@ impl LLMClient {
         println!("{}", request_url.url);
         println!("{}", serde_json::to_string_pretty(&request).unwrap());
         // Get API key and build headers
-        let api_key = self
-            .config
-            .read()
-            .await
-            .api_key
-            .as_ref()
+        let api_key = self.config
+            .read().await
+            .api_key.as_ref()
             .ok_or_else(|| LLMError::ConfigError("API key not set".to_string()))?
             .clone();
 
         let headers = RequestHeader::new(api_key);
 
         // Send HTTP request
-        let response = self
-            .http_client
+        let response = self.http_client
             .post(&request_url.url)
             .header("Authorization", headers.authorization)
             .header("Content-Type", headers.content_type.unwrap_or_default())
             .header("Accept", headers.accept.unwrap_or_default())
             .json(&request)
-            .send()
-            .await
+            .send().await
             .map_err(LLMError::RequestError)?;
 
         // Check response status
@@ -227,20 +246,28 @@ impl LLMClient {
 
         // Parse response
         let response_data = response
-            .json::<Response>()
-            .await
+            .json::<Response>().await
             .map_err(|e| LLMError::ParseError(e.to_string()))?;
 
         Ok(response_data)
     }
 
     /// Chat without stream using specific provider
+    ///
+    /// # Arguments
+    /// * `model` - Target LLM model
+    /// * `message` - User prompt/message
+    /// * `provider` - Optional override for API provider
+    /// * `options` - Generation parameters
+    ///
+    /// # Returns
+    /// [`Result`] containing the complete API response
     pub async fn chat_without_stream(
         &self,
         model: Model,
         message: Prompt,
         provider: Option<ApiProvider>,
-        options: Option<RequestOptions>,
+        options: Option<RequestOptions>
     ) -> Result<Response> {
         let provider = provider.unwrap_or_else(|| model.provider());
 
@@ -256,5 +283,14 @@ impl LLMClient {
 
         // Send request
         self.send_request(request).await
+    }
+
+    /// Updates runtime configuration
+    ///
+    /// # Arguments
+    /// * `new_config` - New provider configuration to apply
+    pub async fn update_config(&self, new_config: ProviderConfig) {
+        let mut config = self.config.write().await;
+        *config = new_config;
     }
 }

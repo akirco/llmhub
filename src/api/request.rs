@@ -415,7 +415,11 @@ impl RequestBody {
     }
 }
 
+/// Implement the `Default` trait for `RequestBody`.
+/// This allows creating a `RequestBody` instance with default values using `RequestBody::default()`.
 impl Default for RequestBody {
+    /// Returns a new `RequestBody` instance with default configuration.
+    /// It uses the `new` method to initialize the default values.
     fn default() -> Self {
         Self::new()
     }

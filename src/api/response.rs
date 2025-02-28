@@ -1,14 +1,21 @@
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
-/// Common response structure for all API calls
+/// Represents the common response structure for all API calls
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Response {
+    /// Unique identifier for the response
     pub id: String,
+    /// Type of object returned (e.g., "chat.completion")
     pub object: String,
+    /// Unix timestamp of when the response was created
     pub created: i64,
+    /// Model identifier used for generation
     pub model: String,
+    /// List of generated response choices
     pub choices: Vec<Choice>,
+    /// Token usage statistics
     pub usage: Option<Usage>,
+    /// System fingerprint for debugging purposes
     #[serde(rename = "system_fingerprint")]
     pub system_fingerprint: Option<String>,
 }
@@ -36,9 +43,7 @@ impl Response {
 
     /// Check if the response is complete
     pub fn is_complete(&self) -> bool {
-        self.choices
-            .iter()
-            .any(|choice| choice.finish_reason.is_some())
+        self.choices.iter().any(|choice| choice.finish_reason.is_some())
     }
 
     /// Get the message content from the first choice for non-streaming response
@@ -64,12 +69,15 @@ impl Response {
  */
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Choice {
+    /// Index of the choice in the response
     pub index: Option<i32>,
     /// sse response ,request body stream:true
     pub delta: Option<Delta>,
     /// general response,request body stream:false
     pub message: Option<Delta>,
+    /// Log probabilities of the generated tokens
     pub logprobs: Option<serde_json::Value>,
+    /// Reason why the generation stopped
     #[serde(rename = "finish_reason")]
     pub finish_reason: Option<String>,
 }
@@ -88,9 +96,12 @@ impl Choice {
 
 #[derive(Debug, Clone, Deserialize, Default, Serialize)]
 pub struct Delta {
+    /// Generated text content
     pub content: Option<String>,
+    /// Reasoning or explanation content
     #[serde(rename = "reasoning_content")]
     pub reasoning_content: Option<String>,
+    /// Role associated with the content (e.g., "assistant")
     pub role: Option<String>,
 }
 
@@ -112,16 +123,22 @@ impl Delta {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Usage {
+    /// Number of tokens used in the prompt
     #[serde(rename = "prompt_tokens")]
     pub prompt_tokens: Option<u32>,
+    /// Number of tokens generated in the completion
     #[serde(rename = "completion_tokens")]
     pub completion_tokens: Option<u32>,
+    /// Total number of tokens used
     #[serde(rename = "total_tokens")]
     pub total_tokens: Option<u32>,
+    /// Detailed breakdown of prompt token usage
     #[serde(rename = "prompt_tokens_details")]
     pub prompt_tokens_details: Option<PromptTokensDetails>,
+    /// Number of tokens served from cache
     #[serde(rename = "prompt_cache_hit_tokens")]
     pub prompt_cache_hit_tokens: Option<u32>,
+    /// Number of tokens not served from cache
     #[serde(rename = "prompt_cache_miss_tokens")]
     pub prompt_cache_miss_tokens: Option<u32>,
 }
@@ -145,6 +162,7 @@ impl Usage {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct PromptTokensDetails {
+    /// Number of tokens served from cache
     #[serde(rename = "cached_tokens")]
     pub cached_tokens: u32,
 }

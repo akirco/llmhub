@@ -1,66 +1,87 @@
+//! Error handling module for LLM operations
+
 use thiserror::Error;
 
+/// Main error type for LLM operations
 #[derive(Debug, Error)]
 pub enum LLMError {
-    #[error("HTTP request failed: {0}")] RequestError(#[from] reqwest::Error),
+    /// HTTP request failure (via reqwest crate)
+    #[error("HTTP request failed: {0}")]
+    RequestError(#[from] reqwest::Error),
+    /// Rate limit exceeded with retry timing
+    #[error("Rate limit exceeded. Please wait {0} seconds before retrying")]
+    RateLimitError(u64),
 
-    #[error("Rate limit exceeded. Please wait {0} seconds before retrying")] RateLimitError(u64),
+    /// Configuration related errors
+    #[error("Invalid configuration: {0}")]
+    ConfigError(String),
+    /// API response errors
+    #[error("API error: {0}")]
+    ApiError(String),
+    /// Network connectivity issues
+    #[error("Network error: {0}")]
+    NetworkError(String),
 
-    #[error("Invalid configuration: {0}")] ConfigError(String),
+    /// Response parsing failures
+    #[error("Parse error: {0}")]
+    ParseError(String),
+    /// Model-specific errors
+    #[error("Model error: {0}")]
+    ModelError(String),
 
-    #[error("API error: {0}")] ApiError(String),
+    /// Token quota exceeded
+    #[error("Token limit exceeded: {0}")]
+    TokenLimitError(String),
+    /// Concurrent request limit reached
+    #[error("Concurrent request limit reached: {0}")]
+    ConcurrencyLimitError(String),
 
-    #[error("Network error: {0}")] NetworkError(String),
-
-    #[error("Parse error: {0}")] ParseError(String),
-
-    #[error("Model error: {0}")] ModelError(String),
-
-    #[error("Token limit exceeded: {0}")] TokenLimitError(String),
-
-    #[error("Concurrent request limit reached: {0}")] ConcurrencyLimitError(String),
-
-    #[error(transparent)] ProviderError(#[from] crate::api::providers::ModelProviderError),
+    /// Provider-specific errors
+    #[error(transparent)]
+    ProviderError(#[from] crate::api::providers::ModelProviderError),
 }
 
+/// Result type alias for LLM operations
 pub type Result<T> = std::result::Result<T, LLMError>;
 
 impl LLMError {
-    /// Returns a user-friendly error message based on the error type
+    /// Converts technical error into user-friendly message
     pub fn user_friendly_message(&self) -> String {
         match self {
             LLMError::RequestError(e) => {
                 if e.is_timeout() {
-                    "请求超时，请检查您的网络连接".to_string()
+                    "Request timed out, please check your network connection".to_string()
                 } else if e.is_connect() {
-                    "无法连接到API服务器，请检查您的网络连接".to_string()
+                    "Failed to connect to API server, please check your network".to_string()
                 } else {
-                    format!("HTTP请求失败: {}", e)
+                    format!("HTTP request failure: {}", e)
                 }
             }
             LLMError::RateLimitError(seconds) => {
-                format!("API请求频率过高，请等待{}秒后再试", seconds)
+                format!("API rate limit exceeded. Please wait {} seconds before retrying", seconds)
             }
-            LLMError::ConfigError(msg) => format!("配置错误: {}. 请检查您的API密钥和配置", msg),
+            LLMError::ConfigError(msg) =>
+                format!("Configuration error: {}. Please check your API keys and settings", msg),
             LLMError::ApiError(msg) => {
                 if msg.contains("invalid_api_key") || msg.contains("authentication") {
-                    "API密钥无效，请检查您的API密钥".to_string()
+                    "Invalid API key. Please verify your credentials".to_string()
                 } else if msg.contains("insufficient_quota") {
-                    "API配额不足，请检查您的账户余额".to_string()
+                    "API quota exhausted. Please check your account balance".to_string()
                 } else {
-                    format!("API错误: {}", msg)
+                    format!("API operation failed: {}", msg)
                 }
             }
-            LLMError::NetworkError(msg) => format!("网络错误: {}", msg),
-            LLMError::ParseError(msg) => format!("解析错误: {}", msg),
+
+            LLMError::NetworkError(msg) => format!("Network issue detected: {}", msg),
+            LLMError::ParseError(msg) => format!("Data parsing failed: {}", msg),
             LLMError::ProviderError(e) =>
                 match e {
                     crate::api::providers::ModelProviderError::UnsupportedApiType(api_type) =>
-                        format!("提供商 {} 不支持模型", api_type),
-                    crate::api::providers::ModelProviderError::MissingConfiguration(provider) => {
-                        format!("缺少提供商 {} 的配置", provider)
-                    }
+                        format!("Provider {} does not support this model", api_type),
+                    crate::api::providers::ModelProviderError::MissingConfiguration(provider) =>
+                        format!("Missing configuration for {} provider", provider),
                 }
+            // Implementation pending for these variants
             LLMError::ModelError(_) => todo!(),
             LLMError::TokenLimitError(_) => todo!(),
             LLMError::ConcurrencyLimitError(_) => todo!(),

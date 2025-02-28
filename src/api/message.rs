@@ -1,5 +1,11 @@
 use serde::{ Deserialize, Serialize };
 
+/// Enum representing different roles in a conversation
+///
+/// Variants correspond to standard chat completion roles:
+/// - System: Sets assistant's behavior
+/// - User: End-user input
+/// - Assistant: AI-generated responses
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum RoleType {
@@ -9,6 +15,7 @@ pub enum RoleType {
 }
 
 impl RoleType {
+    /// Converts enum variant to its lowercase string representation
     pub fn as_str(&self) -> &str {
         match self {
             RoleType::User => "user",
@@ -18,14 +25,25 @@ impl RoleType {
     }
 }
 
+/// Represents a single message in a conversation chain
+///
+/// Contains both the message content and the sender's role type.
+/// Used for building context-aware chat completions.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Prompt {
+    /// Role type of the message sender
     pub role: RoleType,
+    /// Actual text content of the message
     pub content: String,
 }
 
 impl Prompt {
-    /// Create a new prompt with specified role and content
+    /// Creates a new message with specified role and content
+    ///
+    /// # Example
+    /// ```
+    /// let system_msg = Prompt::new(RoleType::System, "You are helpful");
+    /// ```
     pub fn new(role: RoleType, content: impl Into<String>) -> Self {
         Self {
             role,
@@ -33,7 +51,9 @@ impl Prompt {
         }
     }
 
-    /// Create a system message
+    /// Creates a system-level instruction message
+    ///
+    /// Shorthand for `new(RoleType::System, ...)`
     pub fn system(content: impl Into<String>) -> Self {
         Self::new(RoleType::System, content)
     }
@@ -48,23 +68,32 @@ impl Prompt {
         Self::new(RoleType::Assistant, content)
     }
 
-    /// Update the content of the prompt
+    /// Updates message content using builder pattern
+    ///
+    /// # Example
+    /// ```
+    /// let msg = Prompt::user("Hello").with_content("Hi there!");
+    /// ```
     pub fn with_content(mut self, content: impl Into<String>) -> Self {
         self.content = content.into();
         self
     }
 
-    /// Get the length of the content in characters
+    /// Gets character count of the content (not byte length)
     pub fn len(&self) -> usize {
         self.content.len()
     }
 
-    /// Check if the content is empty
+    /// Checks if content is empty string
+    ///
+    /// Returns true when content has zero characters
     pub fn is_empty(&self) -> bool {
         self.content.is_empty()
     }
 
-    /// Clone the prompt with new content
+    /// Creates cloned message with replaced content
+    ///
+    /// Preserves original role type while replacing text content
     pub fn clone_with_content(&self, content: impl Into<String>) -> Self {
         Self::new(self.role.clone(), content)
     }

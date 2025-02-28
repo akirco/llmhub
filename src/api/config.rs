@@ -1,18 +1,30 @@
 use super::providers::ApiProvider;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
+/// Configuration settings for API providers
+///
+/// # Fields
+/// - `api_provider`: Enum variant specifying the AI service provider
+/// - `api_base_url`: Optional base URL for API endpoints (can override default provider URLs)
+/// - `api_key`: Authentication credential for the API service
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProviderConfig {
     pub api_provider: ApiProvider,
     pub api_base_url: Option<String>,
     pub api_key: Option<String>,
 }
+
 impl ProviderConfig {
     /// Creates a new provider configuration with the specified parameters
+    ///
+    /// # Arguments
+    /// * `api_provider` - Service provider enum variant
+    /// * `api_base_url` - Optional custom API endpoint URL
+    /// * `api_key` - Optional authentication key
     pub fn new(
         api_provider: ApiProvider,
         api_base_url: Option<String>,
-        api_key: Option<String>,
+        api_key: Option<String>
     ) -> Self {
         Self {
             api_provider,
@@ -24,12 +36,10 @@ impl ProviderConfig {
     /// Loads provider configurations from a file, creating default config if file doesn't exist
     /// Also merges configurations from environment variables
     pub fn load_from_file(path: &str) -> Result<Vec<Self>, Box<dyn std::error::Error>> {
-        // 确保配置目录存在
         if let Some(parent) = std::path::Path::new(path).parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        // 添加配置文件不存在时创建默认配置
         if !std::path::Path::new(path).exists() {
             Self::create_default_config(path)?;
         }
@@ -37,7 +47,6 @@ impl ProviderConfig {
         let config_content = std::fs::read_to_string(path)?;
         let mut configs: Vec<Self> = serde_json::from_str(&config_content)?;
 
-        // 尝试从环境变量加载配置，并覆盖文件配置
         for provider in [
             ApiProvider::OpenAI,
             ApiProvider::Anthropic,
@@ -49,16 +58,12 @@ impl ProviderConfig {
             ApiProvider::XAI,
             ApiProvider::Tencent,
             ApiProvider::ALIBAILIAN,
-        ]
-        .iter()
-        {
+        ].iter() {
             if let Some(env_config) = Self::from_env(*provider) {
                 if let Some(existing) = configs.iter_mut().find(|c| c.api_provider == *provider) {
-                    // 环境变量优先
                     existing.api_key = env_config.api_key;
                     existing.api_base_url = env_config.api_base_url;
                 } else {
-                    // 添加新配置
                     configs.push(env_config);
                 }
             }
@@ -69,7 +74,6 @@ impl ProviderConfig {
 
     /// Creates a default configuration file with preset providers
     pub fn create_default_config(path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        // 确保配置目录存在
         if let Some(parent) = std::path::Path::new(path).parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -119,7 +123,7 @@ impl ProviderConfig {
                 api_provider: ApiProvider::XAI,
                 api_base_url: Some(ApiProvider::XAI.apiurl().to_string()),
                 api_key: Some("your_XAI_key_here".to_string()),
-            },
+            }
         ];
 
         let config_content = serde_json::to_string_pretty(&default_configs)?;
@@ -135,10 +139,7 @@ impl ProviderConfig {
     /// Returns the default path for the configuration file
     pub fn default_config_path() -> String {
         let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-        home_dir
-            .join(".llmhub/config.json")
-            .to_string_lossy()
-            .to_string()
+        home_dir.join(".llmhub/config.json").to_string_lossy().to_string()
     }
 
     /// Ensures the configuration directory exists, creating it if necessary
@@ -163,7 +164,7 @@ impl ProviderConfig {
     pub fn save_to_file(
         &self,
         configs: &[Self],
-        path: &str,
+        path: &str
     ) -> Result<(), Box<dyn std::error::Error>> {
         let config_content = serde_json::to_string_pretty(configs)?;
         std::fs::write(path, config_content)?;
@@ -189,7 +190,8 @@ impl ProviderConfig {
         let api_base_url_var = format!("{}_API_BASE", env_prefix);
 
         let api_key = std::env::var(&api_key_var).ok();
-        let api_base_url = std::env::var(&api_base_url_var)
+        let api_base_url = std::env
+            ::var(&api_base_url_var)
             .ok()
             .or_else(|| Some(provider.apiurl().to_string()));
 

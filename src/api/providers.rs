@@ -54,15 +54,35 @@ impl ApiType {
     }
 }
 
+/// Configuration for API endpoints
+///
+/// Contains the base URL, supported API types, and custom routes
+/// for a specific API provider.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EndpointConfig {
+    /// Base URL for the API provider
     pub api_url: String,
+    /// List of supported API types (e.g., Chat, ImageGeneration)
     pub supported_types: Vec<ApiType>,
+    /// Custom routes mapping for specific API types
+    ///
+    /// Overrides default routes when specified
     pub custom_routes: HashMap<ApiType, String>,
 }
 
 impl EndpointConfig {
-    /// get the actual route for the specified API type
+    /// Retrieves the route for a specific API type
+    ///
+    /// # Arguments
+    /// * `api_type` - The API type to get route for
+    ///
+    /// # Returns
+    /// - `Ok(String)` with the route if supported
+    /// - `Err(ModelProviderError)` if API type is not supported
+    ///
+    /// # Behavior
+    /// - Returns custom route if defined
+    /// - Falls back to default route if no custom route exists
     pub fn get_route(&self, api_type: ApiType) -> Result<String, ModelProviderError> {
         if !self.supported_types.contains(&api_type) {
             return Err(ModelProviderError::UnsupportedApiType(format!("{:?}", api_type)));
