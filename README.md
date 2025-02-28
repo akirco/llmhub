@@ -1,4 +1,4 @@
-# LLMHub - Rust Client for Large Language Models
+# LLMHub - Large Language Models Client API
 
 A Rust-powered client library for interacting with large language models (LLMs). Supports streaming and non-streaming conversations with various API providers.
 
