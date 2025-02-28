@@ -1,7 +1,7 @@
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 /// Common response structure for all API calls
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Response {
     pub id: String,
     pub object: String,
@@ -36,7 +36,21 @@ impl Response {
 
     /// Check if the response is complete
     pub fn is_complete(&self) -> bool {
-        self.choices.iter().any(|choice| choice.finish_reason.is_some())
+        self.choices
+            .iter()
+            .any(|choice| choice.finish_reason.is_some())
+    }
+
+    /// Get the message content from the first choice for non-streaming response
+    pub fn message(&self) -> Option<String> {
+        self.choices.first().and_then(|c| {
+            c.message.as_ref().and_then(|m| {
+                m.content
+                    .as_ref()
+                    .or(m.reasoning_content.as_ref())
+                    .map(|s| s.to_owned())
+            })
+        })
     }
 
     /// Get the total tokens used
@@ -48,7 +62,7 @@ impl Response {
 /**
  * Choice structure
  */
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Choice {
     pub index: Option<i32>,
     /// sse response ,request body stream:true

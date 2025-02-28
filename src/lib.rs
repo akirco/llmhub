@@ -2,29 +2,23 @@ pub mod api;
 pub mod models;
 pub mod utils;
 
-use bytes::Bytes;
-use futures::stream::once;
-use futures::{ Stream, StreamExt, future };
 use crate::{
     api::{
-        config::ProviderConfig,
-        request::RequestBody,
-        response::Response,
-        message::Prompt,
-        providers::ApiProvider,
-        request::RequestHeader,
+        config::ProviderConfig, message::Prompt, providers::ApiProvider, request::RequestBody,
+        request::RequestHeader, request::RequestOptions, request::RequestUrl, response::Response,
         session::ChatSession,
-        request::RequestUrl,
-        request::RequestOptions,
     },
-    utils::{ error::Result, error::LLMError },
     models::models::Model,
+    utils::{error::LLMError, error::Result},
 };
+use bytes::Bytes;
+use futures::stream::once;
+use futures::{Stream, StreamExt, future};
 use log;
 use reqwest::Client as HttpClient;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::pin::Pin;
 
 pub struct LLMClient {
     http_client: HttpClient,
@@ -48,7 +42,7 @@ impl LLMClient {
     /// Sends a streaming request and returns a stream of responses
     pub async fn send_stream_request(
         &self,
-        request: RequestBody
+        request: RequestBody,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Response>> + Send>>> {
         // Pre-request validation
         self.check_rate_limit(&request.provider).await?;
@@ -60,22 +54,27 @@ impl LLMClient {
         println!("{}", serde_json::to_string_pretty(&request).unwrap());
 
         // Get API key and build headers using RequestHeader struct
-        let api_key = self.config
-            .read().await
-            .api_key.as_ref()
+        let api_key = self
+            .config
+            .read()
+            .await
+            .api_key
+            .as_ref()
             .ok_or_else(|| LLMError::ConfigError("API key not set".to_string()))?
             .clone();
 
         let headers = RequestHeader::new(api_key);
 
         // Send HTTP request
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&request_url.url)
             .header("Authorization", headers.authorization)
             .header("Content-Type", headers.content_type.unwrap_or_default())
             .header("Accept", headers.accept.unwrap_or_default())
             .json(&request)
-            .send().await
+            .send()
+            .await
             .map_err(LLMError::RequestError)?;
 
         // Check response status
@@ -94,7 +93,7 @@ impl LLMClient {
 
     /// Helper method to process each chunk of the stream
     fn process_chunk(
-        chunk_result: std::result::Result<Bytes, reqwest::Error>
+        chunk_result: std::result::Result<Bytes, reqwest::Error>,
     ) -> Pin<Box<dyn Stream<Item = Result<Response>> + Send>> {
         match chunk_result {
             Ok(chunk) => {
@@ -105,11 +104,11 @@ impl LLMClient {
                     .map(|line| line.to_string())
                     .collect();
 
-                Box::pin(
-                    futures::stream::iter(
-                        messages.into_iter().filter_map(|msg| Self::parse_sse_message(&msg))
-                    )
-                )
+                Box::pin(futures::stream::iter(
+                    messages
+                        .into_iter()
+                        .filter_map(|msg| Self::parse_sse_message(&msg)),
+                ))
             }
             Err(e) => Box::pin(once(future::ready(Err(LLMError::RequestError(e))))),
         }
@@ -117,8 +116,6 @@ impl LLMClient {
 
     /// Helper method to parse SSE messages
     fn parse_sse_message(message: &str) -> Option<Result<Response>> {
-        println!("{}", message);
-
         if !message.starts_with("data: ") {
             return None;
         }
@@ -158,7 +155,7 @@ impl LLMClient {
         model: Model,
         message: Prompt,
         provider: Option<ApiProvider>,
-        options: Option<RequestOptions>
+        options: Option<RequestOptions>,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Response>> + Send>>> {
         let provider = provider.unwrap_or_else(|| model.provider());
 
@@ -179,7 +176,7 @@ impl LLMClient {
     pub async fn create_chat_session(
         &self,
         model: Model,
-        provider: Option<ApiProvider>
+        provider: Option<ApiProvider>,
     ) -> ChatSession {
         ChatSession::new(model, provider)
     }
@@ -187,5 +184,77 @@ impl LLMClient {
     pub async fn update_config(&self, new_config: ProviderConfig) {
         let mut config = self.config.write().await;
         *config = new_config;
+    }
+
+    /// Sends a non-streaming request and returns a single response
+    async fn send_request(&self, request: RequestBody) -> Result<Response> {
+        // Pre-request validation
+        self.check_rate_limit(&request.provider).await?;
+
+        // Build request URL
+        let request_url = RequestUrl::new(&request.provider, request.api_type)?;
+        println!("{}", request_url.url);
+        println!("{}", serde_json::to_string_pretty(&request).unwrap());
+        // Get API key and build headers
+        let api_key = self
+            .config
+            .read()
+            .await
+            .api_key
+            .as_ref()
+            .ok_or_else(|| LLMError::ConfigError("API key not set".to_string()))?
+            .clone();
+
+        let headers = RequestHeader::new(api_key);
+
+        // Send HTTP request
+        let response = self
+            .http_client
+            .post(&request_url.url)
+            .header("Authorization", headers.authorization)
+            .header("Content-Type", headers.content_type.unwrap_or_default())
+            .header("Accept", headers.accept.unwrap_or_default())
+            .json(&request)
+            .send()
+            .await
+            .map_err(LLMError::RequestError)?;
+
+        // Check response status
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LLMError::ApiError(error_text));
+        }
+
+        // Parse response
+        let response_data = response
+            .json::<Response>()
+            .await
+            .map_err(|e| LLMError::ParseError(e.to_string()))?;
+
+        Ok(response_data)
+    }
+
+    /// Chat without stream using specific provider
+    pub async fn chat_without_stream(
+        &self,
+        model: Model,
+        message: Prompt,
+        provider: Option<ApiProvider>,
+        options: Option<RequestOptions>,
+    ) -> Result<Response> {
+        let provider = provider.unwrap_or_else(|| model.provider());
+
+        // Create request body
+        let request = RequestBody::new()
+            .model(model)
+            .provider(provider)
+            .options(options)
+            .api_type(api::providers::ApiType::Chat)
+            .add_message(message)
+            .stream(false)
+            .build()?;
+
+        // Send request
+        self.send_request(request).await
     }
 }
