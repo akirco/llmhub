@@ -4,7 +4,7 @@ A Rust-powered client library for interacting with large language models (LLMs).
 
 ## Notice
 
-This is a work in progress and is not yet ready for production use.some providers are maybe supported yet.
+This is a work in progress and is not yet ready for production use.some providers are may not be fully supported yet.
 
 
 ## Models supported
