@@ -53,4 +53,9 @@ impl ChatSession {
     pub fn get_messages(&self) -> &[Prompt] {
         &self.messages
     }
+
+    pub fn with_context(mut self, context: String) -> Self {
+        self.add_message(Prompt::system(context));
+        self
+    }
 }

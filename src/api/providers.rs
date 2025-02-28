@@ -228,6 +228,4 @@ impl std::fmt::Display for ApiProvider {
 #[derive(Debug, thiserror::Error)]
 pub enum ModelProviderError {
     #[error("API type {0} is not supported")] UnsupportedApiType(String),
-
-    #[error("Missing API configuration for provider {0:?}")] MissingConfiguration(ApiProvider),
 }
