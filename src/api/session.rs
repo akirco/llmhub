@@ -1,61 +1,49 @@
-use crate::api::message::Prompt;
-use crate::api::providers::ApiProvider;
-use crate::models::models::Model;
+use uuid::Uuid;
+use crate::api::message::Message;
 
-/// Represents a chat session with a language model
-#[derive(Debug, Clone)]
-pub struct ChatSession {
-    /// The model used for this session
-    pub model: Model,
-    /// The API provider for this session
-    pub provider: ApiProvider,
-    /// History of messages in this session
-    pub messages: Vec<Prompt>,
-    /// Maximum number of messages to keep in history
-    pub max_history: usize,
+pub struct Session {
+    id: String,
+    messages: Vec<Message>,
+    max_history: usize,
 }
 
-impl ChatSession {
-    /// Creates a new chat session with the specified model and optional provider
-    pub fn new(model: Model, provider: Option<ApiProvider>) -> Self {
+impl Session {
+    pub fn new() -> Self {
         Self {
-            model: model.clone(),
-            provider: provider.unwrap_or_else(|| model.provider()),
+            id: Uuid::new_v4().to_string(),
             messages: Vec::new(),
             max_history: 20,
         }
     }
 
-    /// Adds a new message to the session and maintains history limit
-    pub fn add_message(&mut self, message: Prompt) {
-        self.messages.push(message);
-        // if messages.len() > max, remove the oldest messages
-        while self.messages.len() > self.max_history {
-            self.messages.remove(0);
-        }
-    }
-
-    /// Sets the maximum number of messages to keep in history
-    pub fn set_max_history(&mut self, max: usize) {
+    pub fn with_max_history(mut self, max: usize) -> Self {
         self.max_history = max;
-        //if messages.len() > max, remove the oldest messages
-        while self.messages.len() > self.max_history {
-            self.messages.remove(0);
+        self
+    }
+
+    pub fn add_message(&mut self, message: Message) {
+        self.messages.push(message);
+        self.truncate_history();
+    }
+
+    fn truncate_history(&mut self) {
+        if self.max_history > 0 && self.messages.len() > self.max_history {
+            let to_remove = self.messages.len() - self.max_history;
+            self.messages.drain(0..to_remove);
         }
     }
 
-    /// Clears all message history in this session
-    pub fn clear_history(&mut self) {
-        self.messages.clear();
-    }
-
-    /// Returns a reference to the current message history
-    pub fn get_messages(&self) -> &[Prompt] {
+    pub fn get_messages(&self) -> &Vec<Message> {
         &self.messages
     }
 
-    pub fn with_context(mut self, context: String) -> Self {
-        self.add_message(Prompt::system(context));
-        self
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self::new()
     }
 }

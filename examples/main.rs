@@ -1,72 +1,97 @@
-use std::io::Write;
-
+use anyhow::Result;
+use dotenv::dotenv;
 use futures::StreamExt;
-use llmhub::{
-    LLMClient,
-    api::{ config::ProviderConfig, message::Prompt, providers::ApiProvider },
-    models::models::{ DEEPSEEK, Model },
-};
+use llmhub::api::client::Client;
+use llmhub::api::message::{Message, Role};
+use llmhub::api::request::{ApiRequest, RequestOptions};
+use llmhub::api::session::Session;
+use llmhub::models::models::Model;
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
+use std::env;
+use std::io::{stdout, Write};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ProviderConfig::new(
-        ApiProvider::Volcengine,
-        None,
-        Some("a5926646-a0b1-4d4a-b617-6488ca3xdabc".to_string())
-    );
+async fn main() -> Result<()> {
+    dotenv().ok();
 
-    let client = LLMClient::new(config);
+    let api_key = env::var("API_KEY").expect("API_KEY must be set");
+    let client = Client::new(api_key);
+    let options = RequestOptions {
+        temperature: Some(0.7),
+        ..Default::default()
+    };
 
-    let model = Model::Deepseek(DEEPSEEK::R1Volcengine);
+    let mut session = Session::new();
+    let mut rl = DefaultEditor::new()?;
 
-    let message = Prompt::user("一句话介绍Rust语言");
+    println!("Starting interactive chat session. Type 'exit' to end.");
 
-    println!("Send stream message to {}", model.as_str());
-
-    let mut stream = client.chat_with_stream(model.clone(), message.clone(), None, None).await?;
-
-    let mut main_content = String::new();
-    let mut reasoning_content = String::new();
-
-    while let Some(response_result) = stream.next().await {
-        match response_result {
-            Ok(response) => {
-                if let Some(content) = response.main_content() {
-                    print!("{}", content);
-                    std::io::stdout().flush()?;
-                    main_content.push_str(&content);
+    loop {
+        let readline = rl.readline(">> User: ");
+        match readline {
+            Ok(line) => {
+                if line.trim().to_lowercase() == "exit" {
+                    break;
                 }
 
-                if let Some(reasoning) = response.reasoning_content() {
-                    print!("{}", reasoning);
-                    std::io::stdout().flush()?;
-                    reasoning_content.push_str(&reasoning);
+                session.add_message(Message::new(Role::User, line));
+
+                let stream_request = ApiRequest::new(
+                    Model::Deepseek(llmhub::models::models::DEEPSEEK::R1Siliconflow),
+                    Some(&session),
+                )
+                .with_options(options.clone())
+                .stream(true);
+
+                print!(">> Assistant: ");
+                stdout().flush()?;
+
+                let mut full_response = String::new();
+
+                match client.chat_stream(&stream_request) {
+                    Ok(mut stream) => {
+                        while let Some(chunk_result) = stream.next().await {
+                            match chunk_result {
+                                Ok(chunk) => {
+                                    for choice in chunk.choices {
+                                        if let Some(content) = &choice.delta.content {
+                                            print!("{}", content);
+                                            stdout().flush()?;
+                                            full_response.push_str(content);
+                                        }
+                                        if let Some(reasoning) = &choice.delta.reasoning_content {
+                                            print!("{}", reasoning);
+                                            stdout().flush()?;
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("\nStream Error: {}", e);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error starting stream: {}", e);
+                    }
                 }
+                println!(); // Add a newline after the response
+                session.add_message(Message::new(Role::Assistant, full_response));
             }
-            Err(e) => {
-                eprintln!("\nError: {}", e.user_friendly_message());
+            Err(ReadlineError::Interrupted) => {
+                println!("Interrupted");
                 break;
             }
-        }
-    }
-
-    println!("Main Content: {}", main_content);
-    if !reasoning_content.is_empty() {
-        println!("Reasoning: {}", reasoning_content);
-    }
-
-    println!("\nsend general message to {}", model.as_str());
-    match client.chat_without_stream(model.clone(), message, None, None).await {
-        Ok(response) => {
-            if let Some(content) = response.message_content() {
-                println!("Main Content: {}", content);
+            Err(ReadlineError::Eof) => {
+                println!("End of File");
+                break;
             }
-            if let Some(reasoning) = response.message_reasoning() {
-                println!("Reasoning: {}", reasoning);
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
             }
-        }
-        Err(e) => {
-            eprintln!("Error: {}", e);
         }
     }
 

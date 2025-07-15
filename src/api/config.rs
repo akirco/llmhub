@@ -1,5 +1,5 @@
 use super::providers::ApiProvider;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 /// Configuration settings for API providers
 ///
@@ -24,7 +24,7 @@ impl ProviderConfig {
     pub fn new(
         api_provider: ApiProvider,
         api_base_url: Option<String>,
-        api_key: Option<String>
+        api_key: Option<String>,
     ) -> Self {
         Self {
             api_provider,
@@ -58,7 +58,10 @@ impl ProviderConfig {
             ApiProvider::XAI,
             ApiProvider::Tencent,
             ApiProvider::ALIBAILIAN,
-        ].iter() {
+            ApiProvider::GOOGLE,
+        ]
+        .iter()
+        {
             if let Some(env_config) = Self::from_env(*provider) {
                 if let Some(existing) = configs.iter_mut().find(|c| c.api_provider == *provider) {
                     existing.api_key = env_config.api_key;
@@ -81,49 +84,49 @@ impl ProviderConfig {
         let default_configs = vec![
             Self {
                 api_provider: ApiProvider::OpenAI,
-                api_base_url: Some(ApiProvider::OpenAI.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::OpenAI.base_url().to_string()),
                 api_key: Some("your_openai_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Anthropic,
-                api_base_url: Some(ApiProvider::Anthropic.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Anthropic.base_url().to_string()),
                 api_key: Some("your_anthropic_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Tencent,
-                api_base_url: Some(ApiProvider::Tencent.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Tencent.base_url().to_string()),
                 api_key: Some("your_TencentTencent_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Qianfan,
-                api_base_url: Some(ApiProvider::Qianfan.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Qianfan.base_url().to_string()),
                 api_key: Some("your_qianfan_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Siliconflow,
-                api_base_url: Some(ApiProvider::Siliconflow.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Siliconflow.base_url().to_string()),
                 api_key: Some("your_siliconflow_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Deepseek,
-                api_base_url: Some(ApiProvider::Deepseek.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Deepseek.base_url().to_string()),
                 api_key: Some("your_deepseek_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::ZhipuAI,
-                api_base_url: Some(ApiProvider::ZhipuAI.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::ZhipuAI.base_url().to_string()),
                 api_key: Some("your_zhipuai_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::Volcengine,
-                api_base_url: Some(ApiProvider::Volcengine.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::Volcengine.base_url().to_string()),
                 api_key: Some("your_volcengine_key_here".to_string()),
             },
             Self {
                 api_provider: ApiProvider::XAI,
-                api_base_url: Some(ApiProvider::XAI.apiurl().to_string()),
+                api_base_url: Some(ApiProvider::XAI.base_url().to_string()),
                 api_key: Some("your_XAI_key_here".to_string()),
-            }
+            },
         ];
 
         let config_content = serde_json::to_string_pretty(&default_configs)?;
@@ -139,7 +142,10 @@ impl ProviderConfig {
     /// Returns the default path for the configuration file
     pub fn default_config_path() -> String {
         let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-        home_dir.join(".config/llmhub.json").to_string_lossy().to_string()
+        home_dir
+            .join(".config/llmhub.json")
+            .to_string_lossy()
+            .to_string()
     }
 
     /// Ensures the configuration directory exists, creating it if necessary
@@ -164,7 +170,7 @@ impl ProviderConfig {
     pub fn save_to_file(
         &self,
         configs: &[Self],
-        path: &str
+        path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let config_content = serde_json::to_string_pretty(configs)?;
         std::fs::write(path, config_content)?;
@@ -184,16 +190,16 @@ impl ProviderConfig {
             ApiProvider::XAI => "XAI",
             ApiProvider::Tencent => "TENCENT",
             ApiProvider::ALIBAILIAN => "ALIBAILIAN",
+            ApiProvider::GOOGLE => "GOOGLE",
         };
 
         let api_key_var = format!("{}_API_KEY", env_prefix);
         let api_base_url_var = format!("{}_API_BASE", env_prefix);
 
         let api_key = std::env::var(&api_key_var).ok();
-        let api_base_url = std::env
-            ::var(&api_base_url_var)
+        let api_base_url = std::env::var(&api_base_url_var)
             .ok()
-            .or_else(|| Some(provider.apiurl().to_string()));
+            .or_else(|| Some(provider.base_url().to_string()));
 
         if api_key.is_none() {
             return None;

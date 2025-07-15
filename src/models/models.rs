@@ -1,285 +1,185 @@
-//! Module containing all supported LLM models and their implementations
-
 use crate::api::providers::ApiProvider;
-use serde::{ Deserialize, Serialize };
+use serde::{Serialize, Serializer};
+use strum_macros::{Display, EnumString};
 
-/// ChatGLM model variants
-/// Official documentation: https://open.bigmodel.cn/
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+// --- Model-specific Enums ---
+
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum CHATGLM {
+    #[strum(serialize = "glm-4-plus")]
     Glm4Plus,
+    #[strum(serialize = "glm-4-air")]
     Glm4Air,
+    #[strum(serialize = "glm-4-long")]
     Glm4Long,
+    #[strum(serialize = "glm-4-airx")]
     Glm4AirX,
+    #[strum(serialize = "glm-4-flashx")]
     Glm4FlashX,
+    #[strum(serialize = "glm-4-flash")]
     Glm4Flash,
-    Glm4vPlus,
-    Glm4v,
-    Glm4vFlash,
-    GlmZeroPreviewNew,
-    GlmRealtime,
-    Glm4Voice,
-    CogView4,
-    CogView3Flash,
-    CogVideoX2,
-    CogVideoXFlash,
+    #[strum(serialize = "glm-4-alltools")]
     Glm4AllTools,
+    #[strum(serialize = "glm-4v-plus")]
+    Glm4vPlus,
+    #[strum(serialize = "glm-4v")]
+    Glm4v,
+    #[strum(serialize = "glm-4v-flash")]
+    Glm4vFlash,
+    #[strum(serialize = "glm-realtime")]
+    GlmRealtime,
+    #[strum(serialize = "glm-4-voice")]
+    Glm4Voice,
+    #[strum(serialize = "cogview-4")]
+    CogView4,
+    #[strum(serialize = "cogview-3-flash")]
+    CogView3Flash,
+    #[strum(serialize = "cogvideox-2")]
+    CogVideoX2,
+    #[strum(serialize = "cogvideox-flash")]
+    CogVideoXFlash,
+    #[strum(serialize = "codegeex-4")]
     CodeGeeX4,
+    #[strum(serialize = "embedding-2")]
     GlmEmbedding2,
+    #[strum(serialize = "embedding-3")]
     GlmEmbedding3,
+    #[strum(serialize = "glm-zero-preview")]
+    GlmZeroPreviewNew,
 }
-
 impl CHATGLM {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            CHATGLM::Glm4Plus => "glm-4-plus",
-            CHATGLM::Glm4Air => "glm-4-air",
-            CHATGLM::Glm4Long => "glm-4-long",
-            CHATGLM::Glm4AirX => "glm-4-airx",
-            CHATGLM::Glm4FlashX => "glm-4-flashx",
-            CHATGLM::Glm4Flash => "glm-4-flash",
-            CHATGLM::Glm4AllTools => "glm-4-alltools",
-            CHATGLM::Glm4vPlus => "glm-4v-plus",
-            CHATGLM::Glm4v => "glm-4v",
-            CHATGLM::Glm4vFlash => "glm-4v-flash",
-            CHATGLM::GlmRealtime => "glm-realtime",
-            CHATGLM::Glm4Voice => "glm-4-voice",
-            CHATGLM::CogView4 => "cogview-4",
-            CHATGLM::CogView3Flash => "cogview-3-flash",
-            CHATGLM::CogVideoX2 => "cogvideox-2",
-            CHATGLM::CogVideoXFlash => "cogvideox-flash",
-            CHATGLM::CodeGeeX4 => "codegeex-4",
-            CHATGLM::GlmEmbedding2 => "embedding-2",
-            CHATGLM::GlmEmbedding3 => "embedding-3",
-            CHATGLM::GlmZeroPreviewNew => "glm-zero-preview",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            CHATGLM::Glm4Plus => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4Air => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4Long => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4AirX => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4FlashX => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4Flash => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4vPlus => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4v => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4vFlash => ApiProvider::ZhipuAI,
-            CHATGLM::GlmZeroPreviewNew => ApiProvider::ZhipuAI,
-            CHATGLM::GlmRealtime => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4Voice => ApiProvider::ZhipuAI,
-            CHATGLM::CogView4 => ApiProvider::ZhipuAI,
-            CHATGLM::CogView3Flash => ApiProvider::ZhipuAI,
-            CHATGLM::CogVideoX2 => ApiProvider::ZhipuAI,
-            CHATGLM::CogVideoXFlash => ApiProvider::ZhipuAI,
-            CHATGLM::Glm4AllTools => ApiProvider::ZhipuAI,
-            CHATGLM::CodeGeeX4 => ApiProvider::ZhipuAI,
-            CHATGLM::GlmEmbedding2 => ApiProvider::ZhipuAI,
-            CHATGLM::GlmEmbedding3 => ApiProvider::ZhipuAI,
-        }
+        ApiProvider::ZhipuAI
     }
 }
 
-/// ChatGPT model variants
-/// Official documentation: https://platform.openai.com/docs/models
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum CHATGPT {
+    #[strum(serialize = "gpt-4o")]
     V4o,
+    #[strum(serialize = "gpt-4o-mini")]
     V4oMini,
+    #[strum(serialize = "o1-mini")]
     VO1Mini,
+    #[strum(serialize = "o1-preview")]
     VO1Preview,
 }
-
 impl CHATGPT {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            CHATGPT::V4o => "gpt-4o",
-            CHATGPT::V4oMini => "gpt-4o-mini",
-            CHATGPT::VO1Mini => "o1-mini",
-            CHATGPT::VO1Preview => "o1-preview",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            CHATGPT::V4o => ApiProvider::OpenAI,
-            CHATGPT::V4oMini => ApiProvider::OpenAI,
-            CHATGPT::VO1Mini => ApiProvider::OpenAI,
-            CHATGPT::VO1Preview => ApiProvider::OpenAI,
-        }
+        ApiProvider::OpenAI
     }
 }
 
-/// Claude model variants
-/// Official documentation: https://docs.anthropic.com/en/api/getting-started
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum CLAUDE {
+    #[strum(serialize = "claude-3-5-haiku-20241022")]
     Haiku3_5,
+    #[strum(serialize = "claude-3-5-sonnet-20241022")]
     Sonnet3_5,
-    Sonnet3_7,
+    #[strum(serialize = "claude-3-opus-20240229")]
     Opus3,
+    #[strum(serialize = "claude-3-7-sonnet-20250219")]
+    Sonnet3_7,
 }
-
 impl CLAUDE {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            CLAUDE::Haiku3_5 => "claude-3-5-haiku-20241022",
-            CLAUDE::Sonnet3_5 => "claude-3-5-sonnet-20241022",
-            CLAUDE::Opus3 => "claude-3-opus-20240229",
-            CLAUDE::Sonnet3_7 => "claude-3-7-sonnet-20250219",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            CLAUDE::Haiku3_5 => ApiProvider::Anthropic,
-            CLAUDE::Sonnet3_5 => ApiProvider::Anthropic,
-            CLAUDE::Opus3 => ApiProvider::Anthropic,
-            CLAUDE::Sonnet3_7 => ApiProvider::Anthropic,
-        }
+        ApiProvider::Anthropic
     }
 }
 
-/// DeepSeek model variants
-/// Supported platforms:
-/// - Official: https://api-docs.deepseek.com/
-/// - Siliconflow: https://siliconflow.cn/zh-cn/models
-/// - Tencent: https://cloud.tencent.com/document/product/1772/115963
-/// - Volcengine: https://console.volcengine.com/ark/region:ark+cn-beijing/model?vendor=Bytedance&view=LIST_VIEW
-/// - Baidu: https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu
-/// - Aliyun: https://help.aliyun.com/zh/model-studio/getting-started/models
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum DEEPSEEK {
+    #[strum(serialize = "deepseek-chat")]
     V3Official,
+    #[strum(serialize = "deepseek-reasoner")]
     R1Official,
+    #[strum(serialize = "deepseek-ai/DeepSeek-R1")]
     R1Siliconflow,
+    #[strum(serialize = "deepseek-ai/DeepSeek-V3")]
     V3Siliconflow,
+    #[strum(serialize = "deepseek-r1-tencent")]
     R1Tencent,
+    #[strum(serialize = "deepseek-v3-tencent")]
     V3Tencent,
+    #[strum(serialize = "deepseek-r1-volcengine")]
     R1Volcengine,
+    #[strum(serialize = "deepseek-v3-volcengine")]
     V3Volcengine,
+    #[strum(serialize = "deepseek-r1-baidu")]
     R1Baidu,
+    #[strum(serialize = "deepseek-v3-baidu")]
     V3Baidu,
+    #[strum(serialize = "deepseek-r1-aliyun")]
     R1Aliyun,
+    #[strum(serialize = "deepseek-v3-aliyun")]
     V3Aliyun,
 }
-
 impl DEEPSEEK {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            DEEPSEEK::V3Official => "deepseek-chat",
-            DEEPSEEK::R1Official => "deepseek-reasoner",
-            DEEPSEEK::R1Siliconflow => "deepseek-ai/DeepSeek-R1",
-            DEEPSEEK::V3Siliconflow => "deepseek-ai/DeepSeek-V3",
-            DEEPSEEK::R1Tencent => "deepseek-r1",
-            DEEPSEEK::V3Tencent => "deepseek-v3",
-            DEEPSEEK::R1Volcengine => "deepseek-r1-250120",
-            DEEPSEEK::V3Volcengine => "deepseek-v3-241226",
-            DEEPSEEK::R1Baidu => "deepseek-r1",
-            DEEPSEEK::V3Baidu => "deepseek-v3",
-            DEEPSEEK::R1Aliyun => "deepseek-r1",
-            DEEPSEEK::V3Aliyun => "deepseek-v3",
-        }
-    }
-
-    /// Returns the recommended provider for this model variant
     pub fn provider(&self) -> ApiProvider {
         match self {
-            DEEPSEEK::V3Official => ApiProvider::Deepseek,
-            DEEPSEEK::R1Official => ApiProvider::Deepseek,
-            DEEPSEEK::R1Siliconflow => ApiProvider::Siliconflow,
-            DEEPSEEK::V3Siliconflow => ApiProvider::Siliconflow,
-            DEEPSEEK::R1Tencent => ApiProvider::Tencent,
-            DEEPSEEK::V3Tencent => ApiProvider::Tencent,
-            DEEPSEEK::R1Volcengine => ApiProvider::Volcengine,
-            DEEPSEEK::V3Volcengine => ApiProvider::Volcengine,
-            DEEPSEEK::R1Baidu => ApiProvider::Qianfan,
-            DEEPSEEK::V3Baidu => ApiProvider::Qianfan,
-            DEEPSEEK::R1Aliyun => ApiProvider::ALIBAILIAN,
-            DEEPSEEK::V3Aliyun => ApiProvider::ALIBAILIAN,
+            DEEPSEEK::V3Official | DEEPSEEK::R1Official => ApiProvider::Deepseek,
+            DEEPSEEK::R1Siliconflow | DEEPSEEK::V3Siliconflow => ApiProvider::Siliconflow,
+            DEEPSEEK::R1Tencent | DEEPSEEK::V3Tencent => ApiProvider::Tencent,
+            DEEPSEEK::R1Volcengine | DEEPSEEK::V3Volcengine => ApiProvider::Volcengine,
+            DEEPSEEK::R1Baidu | DEEPSEEK::V3Baidu => ApiProvider::Qianfan,
+            DEEPSEEK::R1Aliyun | DEEPSEEK::V3Aliyun => ApiProvider::ALIBAILIAN,
         }
     }
 }
 
-/// Grok model variants
-/// Official documentation: https://docs.x.ai/docs/overview#featured-models
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum GROK {
+    #[strum(serialize = "grok-2-latest")]
     Grok2Latest,
 }
-
 impl GROK {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            GROK::Grok2Latest => "grok-2-latest",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            GROK::Grok2Latest => ApiProvider::XAI,
-        }
+        ApiProvider::XAI
     }
 }
 
-/// Qwen model variants
-/// Official documentation: https://help.aliyun.com/zh/model-studio/getting-started/models
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum QWEN {
+    #[strum(serialize = "qwen2.5-72b-instruct")]
     Qwen25_7BInstruct,
+    #[strum(serialize = "qwen2.5-14b-instruct-1m")]
     Qwen25_14BInstruct1m,
+    #[strum(serialize = "qwen-coder-plus-latest")]
     QwenCoderPlusLatest,
 }
-
 impl QWEN {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            QWEN::Qwen25_7BInstruct => "qwen2.5-72b-instruct",
-            QWEN::Qwen25_14BInstruct1m => "qwen2.5-14b-instruct-1m",
-            QWEN::QwenCoderPlusLatest => "qwen-coder-plus-latest",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            QWEN::Qwen25_7BInstruct => ApiProvider::ALIBAILIAN,
-            QWEN::Qwen25_14BInstruct1m => ApiProvider::ALIBAILIAN,
-            QWEN::QwenCoderPlusLatest => ApiProvider::ALIBAILIAN,
-        }
+        ApiProvider::ALIBAILIAN
     }
 }
 
-/// Doubao model variants
-/// Official documentation: https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-1-5-pro-32k
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
 pub enum DOUBAO {
+    #[strum(serialize = "doubao-1-5-pro-32k-250115")]
     Doubao1_5Pro32k250115,
 }
-
 impl DOUBAO {
-    /// Returns the string representation of the model variant
-    pub fn as_str(&self) -> &str {
-        match self {
-            DOUBAO::Doubao1_5Pro32k250115 => "doubao-1-5-pro-32k-250115",
-        }
-    }
-    /// Returns the API provider for this model variant
     pub fn provider(&self) -> ApiProvider {
-        match self {
-            DOUBAO::Doubao1_5Pro32k250115 => ApiProvider::Volcengine,
-        }
+        ApiProvider::Volcengine
     }
 }
 
-/// Enum representing all supported models
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Display, EnumString)]
+pub enum GEMINI {
+    #[strum(serialize = "gemini-2.5-flash")]
+    Flash2_5,
+    #[strum(serialize = "gemini-2.5-pro")]
+    Pro2_5,
+}
+impl GEMINI {
+    pub fn provider(&self) -> ApiProvider {
+        ApiProvider::Volcengine
+    }
+}
+
+// --- Top-level Model Enum ---
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Model {
     ChatGLM(CHATGLM),
     ChatGPT(CHATGPT),
@@ -291,29 +191,38 @@ pub enum Model {
 }
 
 impl Model {
-    /// Returns the string representation of the model
-    pub fn as_str(&self) -> &str {
-        match self {
-            Model::ChatGLM(m) => m.as_str(),
-            Model::ChatGPT(m) => m.as_str(),
-            Model::Claude(m) => m.as_str(),
-            Model::Deepseek(m) => m.as_str(),
-            Model::Grok(m) => m.as_str(),
-            Model::Qwen(m) => m.as_str(),
-            Model::Doubao(m) => m.as_str(),
-        }
-    }
-
-    /// Returns the API provider for this model
     pub fn provider(&self) -> ApiProvider {
         match self {
+            Model::ChatGLM(m) => m.provider(),
             Model::ChatGPT(m) => m.provider(),
             Model::Claude(m) => m.provider(),
-            Model::ChatGLM(m) => m.provider(),
             Model::Deepseek(m) => m.provider(),
-            Model::Qwen(m) => m.provider(),
             Model::Grok(m) => m.provider(),
+            Model::Qwen(m) => m.provider(),
             Model::Doubao(m) => m.provider(),
         }
+    }
+}
+
+impl std::fmt::Display for Model {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Model::ChatGLM(m) => write!(f, "{}", m),
+            Model::ChatGPT(m) => write!(f, "{}", m),
+            Model::Claude(m) => write!(f, "{}", m),
+            Model::Deepseek(m) => write!(f, "{}", m),
+            Model::Grok(m) => write!(f, "{}", m),
+            Model::Qwen(m) => write!(f, "{}", m),
+            Model::Doubao(m) => write!(f, "{}", m),
+        }
+    }
+}
+
+impl Serialize for Model {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }

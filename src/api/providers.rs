@@ -1,13 +1,10 @@
-use serde::{ Deserialize, Serialize };
-use std::hash::Hash;
+use crate::utils::error::{LlmHubError, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::hash::Hash;
+use strum_macros::{Display, EnumString};
 
-/**
- * API Providers
- * Official API providers & Api services platforms
- */
-
-#[derive(Debug, Serialize, Deserialize, Copy, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, Serialize, Deserialize, Copy, PartialEq, Eq, Clone, Hash, Display, EnumString)]
 pub enum ApiProvider {
     Siliconflow,
     Deepseek,
@@ -19,14 +16,11 @@ pub enum ApiProvider {
     XAI,
     Volcengine,
     Tencent,
+    GOOGLE,
 }
 
-/**
- * API Endpoints
- * Endpoints for each API provider
- */
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum ApiType {
     Chat,
     ImageGeneration,
@@ -39,8 +33,7 @@ pub enum ApiType {
 }
 
 impl ApiType {
-    /// get the default route for the API type
-    pub fn default_route(&self) -> &'static str {
+    pub fn default_path(&self) -> &'static str {
         match self {
             Self::Chat => "/chat/completions",
             Self::ImageGeneration => "/images/generations",
@@ -54,55 +47,32 @@ impl ApiType {
     }
 }
 
-/// Configuration for API endpoints
-///
-/// Contains the base URL, supported API types, and custom routes
-/// for a specific API provider.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EndpointConfig {
-    /// Base URL for the API provider
-    pub api_url: String,
-    /// List of supported API types (e.g., Chat, ImageGeneration)
+    pub base_url: String,
     pub supported_types: Vec<ApiType>,
-    /// Custom routes mapping for specific API types
-    ///
-    /// Overrides default routes when specified
-    pub custom_routes: HashMap<ApiType, String>,
+    pub custom_paths: HashMap<ApiType, String>,
 }
 
 impl EndpointConfig {
-    /// Retrieves the route for a specific API type
-    ///
-    /// # Arguments
-    /// * `api_type` - The API type to get route for
-    ///
-    /// # Returns
-    /// - `Ok(String)` with the route if supported
-    /// - `Err(ModelProviderError)` if API type is not supported
-    ///
-    /// # Behavior
-    /// - Returns custom route if defined
-    /// - Falls back to default route if no custom route exists
-    pub fn get_route(&self, api_type: ApiType) -> Result<String, ModelProviderError> {
+    pub fn get_url(&self, api_type: ApiType) -> Result<String> {
         if !self.supported_types.contains(&api_type) {
-            return Err(ModelProviderError::UnsupportedApiType(format!("{:?}", api_type)));
+            return Err(LlmHubError::ProviderError(format!(
+                "API type '{}' is not supported by provider.",
+                api_type
+            )));
         }
-        Ok(
-            self.custom_routes
-                .get(&api_type)
-                .cloned()
-                .unwrap_or_else(|| api_type.default_route().to_string())
-        )
+        let path = self
+            .custom_paths
+            .get(&api_type)
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| api_type.default_path());
+        Ok(format!("{}{}", self.base_url, path))
     }
 }
 
 impl ApiProvider {
-    /**
-     * Returns the API URL for the provider
-     * @param {ApiProvider} provider - The API provider
-     * @returns {string} The API URL
-     */
-    pub fn apiurl(&self) -> &str {
+    pub fn base_url(&self) -> &str {
         match self {
             ApiProvider::Siliconflow => "https://api.siliconflow.cn/v1/",
             ApiProvider::Deepseek => "https://api.deepseek.com",
@@ -114,118 +84,46 @@ impl ApiProvider {
             ApiProvider::XAI => "https://api.x.ai/v1/",
             ApiProvider::Volcengine => "https://ark.cn-beijing.volces.com/api/v3/",
             ApiProvider::Tencent => "https://api.lkeap.cloud.tencent.com/v1/",
+            ApiProvider::GOOGLE => "https://generativelanguage.googleapis.com/v1beta/openai/",
         }
     }
 
-    /// Returns the endpoint configuration for the provider
     pub fn get_endpoint_config(&self) -> EndpointConfig {
-        match self {
-            ApiProvider::OpenAI =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![
-                        ApiType::Chat,
-                        ApiType::ImageGeneration,
-                        ApiType::ImageEdit,
-                        ApiType::Embedding,
-                        ApiType::AudioSpeech,
-                        ApiType::AudioTranscription,
-                        ApiType::AudioTranslation,
-                        ApiType::ListModels
-                    ],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::Anthropic =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::from([(ApiType::Chat, "/messages".to_string())]),
-                },
-            ApiProvider::Siliconflow =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![
-                        ApiType::Chat,
-                        ApiType::ImageGeneration,
-                        ApiType::Embedding,
-                        ApiType::AudioSpeech,
-                        ApiType::AudioTranscription
-                    ],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::Deepseek =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::Qianfan =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::ZhipuAI =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::ALIBAILIAN =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::XAI =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::Volcengine =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
-            ApiProvider::Tencent =>
-                EndpointConfig {
-                    api_url: self.apiurl().to_string(),
-                    supported_types: vec![ApiType::Chat],
-                    custom_routes: HashMap::new(),
-                },
+        let base_url = self.base_url().trim_end_matches('/').to_string();
+        let (supported_types, custom_paths) = match self {
+            ApiProvider::OpenAI => (
+                vec![
+                    ApiType::Chat,
+                    ApiType::ImageGeneration,
+                    ApiType::ImageEdit,
+                    ApiType::Embedding,
+                    ApiType::AudioSpeech,
+                    ApiType::AudioTranscription,
+                    ApiType::AudioTranslation,
+                    ApiType::ListModels,
+                ],
+                HashMap::new(),
+            ),
+            ApiProvider::Anthropic => (
+                vec![ApiType::Chat],
+                HashMap::from([(ApiType::Chat, "/messages".to_string())]),
+            ),
+            ApiProvider::Siliconflow => (
+                vec![
+                    ApiType::Chat,
+                    ApiType::ImageGeneration,
+                    ApiType::Embedding,
+                    ApiType::AudioSpeech,
+                    ApiType::AudioTranscription,
+                ],
+                HashMap::new(),
+            ),
+            _ => (vec![ApiType::Chat], HashMap::new()),
+        };
+        EndpointConfig {
+            base_url,
+            supported_types,
+            custom_paths,
         }
     }
-
-    /**
-     * Checks if the provider supports the specified API type
-     * @param {ApiProvider} provider - The API provider
-     * @param {ApiType} api_type - The API type
-     * @returns {boolean} Whether the provider supports the API type
-     */
-    pub fn supports_type(&self, api_type: ApiType) -> bool {
-        self.get_endpoint_config().supported_types.contains(&api_type)
-    }
-
-    /// Gets the route for the specified API type
-    pub fn get_route(&self, api_type: ApiType) -> Result<String, ModelProviderError> {
-        self.get_endpoint_config().get_route(api_type)
-    }
-
-    /// Returns a list of API types supported by this provider
-    pub fn get_supported_types(&self) -> Vec<ApiType> {
-        self.get_endpoint_config().supported_types.clone()
-    }
-}
-
-impl std::fmt::Display for ApiProvider {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ModelProviderError {
-    #[error("API type {0} is not supported")] UnsupportedApiType(String),
 }
