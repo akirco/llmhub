@@ -6,24 +6,23 @@ edition = "2024"
 [dependencies]
 dirs = "6.0.0"
 futures = "0.3.31"
-reqwest = { version = "0.12.12", features = ["json", "stream"] }
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.139"
-serde_with = "3.12.0"
-thiserror = "2.0.11"
-tokio = { version = "1.43.0", features = ["full"] }
-log = "0.4.20"
-bytes = "1.10.0"
+reqwest = { version = "0.12.22", features = ["json", "stream"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde_with = "3.14.0"
+thiserror = "2.0.12"
+tokio = { version = "1.46.1", features = ["full"] }
+log = "0.4.27"
+bytes = "1.10.1"
 strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
 reqwest-eventsource = "0.6.0"
 async-stream = "0.3.6"
-uuid = { version = "1.10.0", features = ["v4"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 
-# 示例专用依赖（不包含在正式构建中）
 [dev-dependencies]
 rustyline = "16.0.0"
-anyhow = "1.0.82"
+anyhow = "1.0.98"
 dotenv = "0.15.0"
 
 [[example]]
